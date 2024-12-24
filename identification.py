@@ -2,10 +2,9 @@ import json
 import numpy as np
 from deepface import DeepFace
 
-# Define a function to calculate cosine distance
 def cosine_distance(embedding1, embedding2):
-    embedding1 = np.array(embedding1).flatten()  # Flatten to ensure they are 1D arrays
-    embedding2 = np.array(embedding2).flatten()  # Flatten to ensure they are 1D arrays
+    embedding1 = np.array(embedding1).flatten()
+    embedding2 = np.array(embedding2).flatten()
     
     # Check if they have the same shape
     print('-------------------------uploaded_embedding')
@@ -18,7 +17,7 @@ def cosine_distance(embedding1, embedding2):
         print(f"Shape mismatch: {embedding1.shape} != {embedding2.shape}")
         raise ValueError("Embeddings must have the same shape")
 
-    print('------------9999999')
+    print('------------')
     print(f"Type of embedding1: {type(embedding1)}")
     print(f"Type of embedding2: {type(embedding2)}")
     # Calculate cosine distance
@@ -28,15 +27,14 @@ def cosine_distance(embedding1, embedding2):
 with open("embeddings.json", "r") as f:
     embeddings = json.load(f)
 
-uploaded_image_path = "D:\\kandupidtham\\ArjunProjectDefense\\rashid.jpeg"
+uploaded_image_path = "1test.jpeg"
 uploaded_embedding = DeepFace.represent(uploaded_image_path, model_name="Facenet", enforce_detection=False)
 
 
-threshold = 0.4  # Set based on testing
+threshold = 0.3  # Set based on testing
 best_match = None
 best_score = float("inf")
 
-# Debug print statements to check the shapes
 print("Shape of uploaded embedding:", np.array(uploaded_embedding[0]['embedding']).shape)
 # print("Shape of a saved embedding (first person):", np.array(embeddings['facial_area'][0]).shape)  # Adjust the key 'person_name'
 
@@ -44,12 +42,12 @@ for person, person_embeddings in embeddings.items():
     for embedding in person_embeddings:
         # Ensure the embeddings are the same shape before calculating distance
         score = cosine_distance(uploaded_embedding[0]['embedding'], embedding[0]['embedding'])
-        print('ppppppppppppppp')
         if score < best_score and score < threshold:
             best_match = person
             best_score = score
 
 if best_match:
     print(f"Match found: {best_match}")
+    print(f"Match score: {best_score}")
 else:
     print("No match found.")

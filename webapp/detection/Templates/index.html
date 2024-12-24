@@ -1,0 +1,112 @@
+{% extends 'base.html'%}
+{% block content %}
+    <div class="container-fluid" style="margin-top:50px">
+        <div class="col-md-offset-3 col-md-6">
+            <h3 class="page-header text-primary text-center">Upload Files Here</h3>
+            {% if messages %}
+                {% for message in messages %}
+                    {% if message.tags == 'error'%}
+                        <div class="alert alert-danger">
+                            {{ message }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-{{ message.tags }}">
+                            {{ message }}
+                        </div>	
+                    {% endif %}				
+                {% endfor %}
+            {% endif %} 
+            <form action="{% url 'uploadfile' %}" method="POST" enctype="multipart/form-data">
+                
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Upload Files</label>                    
+                    {{form.file}}
+                </div>
+                <button type="submit" class="btn btn-primary text-center">Upload</button>
+            </form>            
+            <div>
+                {% if mydata %}
+                <h3 class="page-header text-primary text-center">Uploaded Files</h3>
+                <style>
+                    #center{
+                       text-align:center; 
+                    }
+                </style> 
+                           <p class="pull-right">Select All <input type="checkbox" id="checkall" value="Select All" ></p>
+                           
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th id="center">S.No</th>                        
+                            <th id="center">File</th>                    
+                            <th id="center">Delete</th>                            
+                            <th id="center">Select</th>
+                        </tr>                    
+                    </thead>
+                    {% for data in mydata %}
+                        <tbody>
+                            <tr>
+                                <td style="text-align:center">{{forloop.counter}}</td>                         
+                                <td><a href="{{data.my_file.url}}">{{data.my_file}}</a></td>
+                                <td style="text-align:center"><a href="deletefile/{{data.id}}" class="btn btn-primary">Delete</a></td>                                
+                                <td style="text-align:center"><input type="checkbox", id="check" class="checkitem" value="{{data.id}}"></td>
+                            </tr>                        
+                        </tbody>
+                    {% endfor %}                
+                </table>                
+                <button type="button" id="btn_delete" class="btn btn-danger pull-right">Delete</button>
+                <a href="success.html"><button type="submit" id="btn_check" class="btn btn-success pull-right p-3">Submit</button></a>
+                {% endif %}            
+                
+            </div>  
+        </div>
+    </div>       
+    <script>
+        $(document).ready(function(){
+            $("#checkall").change(function(){
+                $("input:checkbox").prop("checked",$(this).prop("checked"));                        
+            });
+
+            $(".checkitem").change(function(){           
+                if($(".checkitem:checked").length == $(".checkitem").length){             
+                    $("#checkall").prop("checked",true);
+                }
+                else{
+                    $("#checkall").prop("checked",false);                
+                }   
+            });
+           
+            $('#btn_delete').click(function(){
+                var id=[];
+                var csrf=$('input[name=csrfmiddlewaretoken]').val();                                                  
+                if(confirm('Are you sure you want to delete this file ?')) 
+                {               
+                    $('#check:checked').each(function(i){                             
+                            id[i]=$(this).val();                                                                                                                                                                                      
+                    });                            
+                    if(id.length==0){
+                        alert("Please select files to delete");
+                    }
+                    else{
+                        $.ajax({
+                            url:"delete/",
+                            method:"POST",
+                            data:{
+                                id,
+                                csrfmiddlewaretoken:csrf
+                            },
+                            success:function(response){
+                                for(var i=0; i < id.length; i++){
+                                    $('tr#'+id[i]+'').css('background-color', '#ccc');
+                                    $('tr#'+id[i]+'').fadeOut('slow');                                
+                                    setInterval('location.reload()', 100); 
+                                }
+                            }
+                        });
+                    }
+                }                                                                                     
+            });
+        });
+    </script>
+{% endblock%}
