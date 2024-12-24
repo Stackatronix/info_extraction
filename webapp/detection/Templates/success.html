@@ -9,7 +9,38 @@
                        text-align:center; 
                     }
                 </style> 
-                <p>{{result}}</p>        
+                <h1>Entity Details</h1>
+
+                {% for entry in result %}
+                    <h2>Summary</h2>
+                    <p>{{ entry.summary }}</p>
+            
+                    <h2>Entities</h2>
+                    <ul>
+                        {% for person, details in entry.entities.items %}
+                            <li>
+                                <strong>{{ person }}</strong>
+                                {% if details %}
+                                    <ul>
+                                        {% for category, values in details.items %}
+                                            <li>
+                                                <strong>{{ category }}:</strong>
+                                                {% if values is list %}
+                                                    {{ values|join:", " }}
+                                                {% else %}
+                                                    {{ values }}
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p>No details available.</p>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endfor %}
+                <!-- <p>{{result}}</p>         -->
                 
             </div>  
         </div>

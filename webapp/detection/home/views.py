@@ -16,7 +16,7 @@ import stanza # type: ignore
 stanza.download('en')
 # Load NLP model
 nlp = spacy.load("en_core_web_sm")
-ner_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
+# ner_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 # nlpStanza = stanza.Pipeline('en', processors='tokenize,ner')
 nlpStanza = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse,ner')
 
@@ -27,7 +27,6 @@ def extract_text_from_pdf(pdf_path):
     text = ""
     for page in reader.pages:
         text += page.extract_text()
-    print(text)
     return text
 
 def extract_named_entities(text):
@@ -90,7 +89,7 @@ def summarize_text(text):
     summary = summarizer(text, max_length=100, min_length=25, do_sample=False)
     return summary[0]["summary_text"]
 
-def extract_and_summarize(pdf_path):
+def extract_and_summarize_pdf(pdf_path):
     """Extract entities and summarize connections from a PDF."""
     text = extract_text_from_pdf(pdf_path)
     entities = extract_named_entities(text)
@@ -101,38 +100,6 @@ def extract_and_summarize(pdf_path):
         "entities": entities
     }
 
-# Example usage
-if __name__ == "__main__":
-    pdf_path = r"upload\susp.pdf"  # Replace with your PDF file path
-    result = extract_and_summarize(pdf_path)
-    
-    print("Extracted Entities:")
-    # for entity_type, values in result["entities"].items():
-    #     print(f"{entity_type}: {', '.join(values)}")
-    persons = []
-    locations = []
-    Organization = []
-    WORK_OF_ART = []
-    # for ent in result["entities"].ents:
-    #     if ent.type == 'PERSON':
-    #         persons.append(ent.text)
-    #     elif ent.type == 'GPE':
-    #         locations.append(ent.text)
-    #     elif ent.type == 'ORG':
-    #         Organization.append(ent.text)
-    #     elif ent.type == 'WORK_OF_ART':
-    #         WORK_OF_ART.append(ent.text)
-        
-        # print(f"Entity: {ent.text}, Label: {ent.type}")
-    
-    print("\nSummary:")
-    print(result["summary"])
-
-    print('-------------------------------')
-    print(persons)
-    print(locations)
-    print(Organization)
-    print(WORK_OF_ART)
 
 def home(request):
     mydata=MyFileUpload.objects.all()
@@ -157,7 +124,7 @@ def process_text_file(file_path):
     print(f"Processing text file: {file_path}")
 
 def process_pdf_file(file_path):
-    summary.append(extract_text_from_pdf(file_path))
+    return extract_and_summarize_pdf(file_path)
 
 def process_doc_file(file_path):
     print(f"Processing doc file: {file_path}")
@@ -197,24 +164,27 @@ def get_file_paths(folder_path):
 
 # Step 4: Process files by their extensions
 def process_files_in_folder(folder_path):
+    result = []
     file_paths = get_file_paths(folder_path)
     print(file_paths)
     for file_path in file_paths:
         extension = os.path.splitext(file_path)[1].lower()  # Get file extension in lowercase
-        handler = file_handlers.get(extension, process_unknown_file)  # Get corresponding function
-        handler(file_path)  # Call the function with file path as argument
+        # handler = file_handlers.get(extension, process_unknown_file)  # Get corresponding function
+        # handler(file_path) 
+        if extension == '.pdf':
+            test = process_pdf_file(file_path)
+            print('::::::::::')
+            print(test)
+            result.append(test)
+    return result
 
-
-    
 def success(request):
     folder_path = "upload/"
-    process_files_in_folder(folder_path)
+    res = process_files_in_folder(folder_path)
 
-    return render(request, 'success.html',{'result': summary})
-
-
-
-
+    print('[[[[[[[[[[[[]]]]]]]]]]]]')
+    print(res)
+    return render(request, 'success.html',{'result': res})
 
 
 def uploadfile(request):
