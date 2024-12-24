@@ -4,10 +4,11 @@ from .models import MyFileUpload
 from django.contrib import messages
 from django.urls import path
 import os
+from home import textfns, face_identify
 
-import re
+import json
 import spacy
-from PyPDF2 import PdfReader
+
 from transformers import pipeline # type: ignore
 from spacy_entity_linker import EntityLinker #type: ignore
 import stanza # type: ignore
@@ -20,14 +21,7 @@ nlp = spacy.load("en_core_web_sm")
 # nlpStanza = stanza.Pipeline('en', processors='tokenize,ner')
 nlpStanza = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse,ner')
 
-def extract_text_from_pdf(pdf_path):
-    # """Extract text from a PDF file."""
-    
-    reader = PdfReader(pdf_path)
-    text = ""
-    for page in reader.pages:
-        text += page.extract_text()
-    return text
+data= {}
 
 def extract_named_entities(text):
     # """Extract named entities using SpaCy."""
@@ -91,7 +85,7 @@ def summarize_text(text):
 
 def extract_and_summarize_pdf(pdf_path):
     """Extract entities and summarize connections from a PDF."""
-    text = extract_text_from_pdf(pdf_path)
+    text = textfns.extract_text_from_pdf(pdf_path)
     entities = extract_named_entities(text)
     summary = summarize_text(text)
 
@@ -112,10 +106,6 @@ def home(request):
         context={'form':myform}
         return render(request,'index.html',context)
     
-
-
-# import mimetypes
-
 summary = []
 files = []
 
@@ -153,16 +143,7 @@ def get_file_paths(folder_path):
         if os.path.isfile(os.path.join(folder_path, file))
     ]
 
-
-
-def get_file_paths(folder_path):
-    return [
-        os.path.join(folder_path, file)
-        for file in os.listdir(folder_path)
-        if os.path.isfile(os.path.join(folder_path, file))
-    ]
-
-# Step 4: Process files by their extensions
+# Process files by their extensions
 def process_files_in_folder(folder_path):
     result = []
     file_paths = get_file_paths(folder_path)
@@ -182,7 +163,6 @@ def success(request):
     folder_path = "upload/"
     res = process_files_in_folder(folder_path)
 
-    print('[[[[[[[[[[[[]]]]]]]]]]]]')
     print(res)
     return render(request, 'success.html',{'result': res})
 
@@ -220,3 +200,8 @@ def delete_all(request):
             os.remove(data.my_file.path)
         messages.success(request,'File deleted successfully.')  
         return redirect('home')   
+
+
+
+with open("static\JSON\data.json", "w") as f:
+    json.dump(data, f)
