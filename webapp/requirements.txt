@@ -5,10 +5,11 @@ scikit-learn
 deepface
 numpy
 django
--------text------------
+
 spacy
 PyPDF2
 spacy_entity_linker
-python -m spacy download en_core_web_sm
-pip install transformers
-
+# spacy download en_core_web_sm
+transformers
+ultralytics
+matplotlib

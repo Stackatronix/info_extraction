@@ -4,7 +4,7 @@ from .models import MyFileUpload
 from django.contrib import messages
 from django.urls import path
 import os
-from home import textfns, face_identify
+from home import textfns, face_identify, detecting_images
 
 import json
 import spacy
@@ -14,85 +14,82 @@ from spacy_entity_linker import EntityLinker #type: ignore
 import stanza # type: ignore
 
 
-stanza.download('en')
+# stanza.download('en')
 # Load NLP model
 nlp = spacy.load("en_core_web_sm")
 # ner_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 # nlpStanza = stanza.Pipeline('en', processors='tokenize,ner')
-nlpStanza = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse,ner')
+# nlpStanza = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse,ner')
 
 data= {}
+file_context= {}
+file_info={}
 
 def extract_named_entities(text):
-    # """Extract named entities using SpaCy."""
-    # doc = nlp(text)
-    # entities = {"PERSON": [], "EVENT": [], "GPE": []}  # GPE: Geopolitical entity (places)
-    # for ent in doc.ents:
-    #     if ent.label_ in entities:
-    #         entities[ent.label_].append(ent.text)
-    # # Remove duplicates
-    # for key in entities:
-    #     entities[key] = list(set(entities[key]))
-    # return entities
-
-    # entities = ner_model(text)
-    # for entity in entities:
-    #     print(f"Entity: {entity['word']}, Label: {entity['entity']}, Score: {entity['score']}")
-    # return entities
-
-    # related_info = {}
-    # current_person = None
-    doc = nlpStanza(text)
-    # return doc
-
-    entities = {}
-    current_person = None
-
-    for sentence in doc.sentences:
-        for ent in sentence.ents:
-            # If the entity is a person, set it as the current person
-            if ent.type == "PERSON":
-                current_person = ent.text
-                if current_person not in entities:
-                    entities[current_person] = {}
-            # Assign attributes like dates, locations, or any additional details
-            elif current_person:
-                if ent.type in ["DATE", "TIME", "GPE", "QUANTITY"]:
-                    entities[current_person][ent.type] = entities[current_person].get(ent.type, []) + [ent.text]
-
-        # Check sentences manually for explicit attributes like Height or Gender
-        if current_person:
-            sentence_text = sentence.text.lower()
-            if "height" in sentence_text:
-                entities[current_person]["Height"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-            if "weight" in sentence_text:
-                entities[current_person]["Weight"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-            if "gender" in sentence_text:
-                entities[current_person]["Gender"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-            if "alias" in sentence_text:
-                entities[current_person]["Alias"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-
-    print('----------------------')
-    print(entities)
+    # nlp = spacy.load("en_core_web_sm")
+    doc = nlp(text)
+    entities = []
+    for ent in doc.ents:
+        
+        entities.append({"text": ent.text, "label": ent.label_})
     return entities
 
 
-def summarize_text(text):
-    """Generate a summary of the text."""
-    summarizer = pipeline("summarization")
-    summary = summarizer(text, max_length=100, min_length=25, do_sample=False)
-    return summary[0]["summary_text"]
+
+
+
+
+    # doc = nlpStanza(text)
+    # print(doc)
+    # entities = {}
+    # current_person = None
+
+    # for sentence in doc.sentences:
+    #     for ent in sentence.ents:
+    #         # If the entity is a person, set it as the current person
+    #         if ent.type == "PERSON":
+    #             current_person = ent.text
+    #             if current_person not in entities:
+    #                 entities[current_person] = {}
+    #         # Assign attributes like dates, locations, or any additional details
+    #         elif current_person:
+    #             if ent.type in ["DATE", "TIME", "GPE", "QUANTITY"]:
+    #                 entities[current_person][ent.type] = entities[current_person].get(ent.type, []) + [ent.text]
+
+    #     # Check sentences manually for explicit attributes like Height or Gender
+    #     if current_person:
+    #         sentence_text = sentence.text.lower()
+    #         if "height" in sentence_text:
+    #             entities[current_person]["Height"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+    #         if "weight" in sentence_text:
+    #             entities[current_person]["Weight"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+    #         if "gender" in sentence_text:
+    #             entities[current_person]["Gender"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+    #         if "alias" in sentence_text:
+    #             entities[current_person]["Alias"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+
+    # print(entities)
+    # return entities
+
+
+# def summarize_text(text):
+#     """Generate a summary of the text."""
+#     summarizer = pipeline("summarization")
+#     summary = summarizer(text, max_length=100, min_length=25, do_sample=False)
+#     return summary[0]["summary_text"]
 
 def extract_and_summarize_pdf(pdf_path):
-    """Extract entities and summarize connections from a PDF."""
     text = textfns.extract_text_from_pdf(pdf_path)
     entities = extract_named_entities(text)
-    summary = summarize_text(text)
-
-    return {
-        "summary": summary,
-        "entities": entities
-    }
+    # summary = summarize_text(text)
+    if "pdf" in file_context:
+        file_context["pdf"].extend([entities])
+    else:
+        file_context["pdf"] = [entities]
+    # return {
+    #     "summary": summary,
+    #     "entities": entities
+    # }
 
 
 def home(request):
@@ -106,26 +103,27 @@ def home(request):
         context={'form':myform}
         return render(request,'index.html',context)
     
-summary = []
-files = []
 
 # functions for each file type
 def process_text_file(file_path):
     print(f"Processing text file: {file_path}")
 
 def process_pdf_file(file_path):
-    return extract_and_summarize_pdf(file_path)
+    extract_and_summarize_pdf(file_path)
+    print("processed")
 
 def process_doc_file(file_path):
     print(f"Processing doc file: {file_path}")
 
 def process_image_file(file_path):
+    x = detecting_images.detect_objects_and_plot(file_path)
+    # print(x)
     print(f"Processing image file: {file_path}")
 
 def process_unknown_file(file_path):
     print(f"Unknown file type: {file_path}")
 
-# Step 2: Map extensions to functions
+# Map extensions to functions
 file_handlers = {
     ".txt": process_text_file,
     ".pdf": process_pdf_file,
@@ -135,7 +133,7 @@ file_handlers = {
     ".docx": process_doc_file,
 }
 
-# Step 3: Get file paths from the folder
+# Get file paths from the folder
 def get_file_paths(folder_path):
     return [
         os.path.join(folder_path, file)
@@ -145,26 +143,19 @@ def get_file_paths(folder_path):
 
 # Process files by their extensions
 def process_files_in_folder(folder_path):
-    result = []
     file_paths = get_file_paths(folder_path)
     print(file_paths)
     for file_path in file_paths:
         extension = os.path.splitext(file_path)[1].lower()  # Get file extension in lowercase
-        # handler = file_handlers.get(extension, process_unknown_file)  # Get corresponding function
-        # handler(file_path) 
-        if extension == '.pdf':
-            test = process_pdf_file(file_path)
-            print('::::::::::')
-            print(test)
-            result.append(test)
-    return result
+        handler = file_handlers.get(extension, process_unknown_file)  # Get corresponding function
+        handler(file_path) 
 
 def success(request):
     folder_path = "upload/"
     res = process_files_in_folder(folder_path)
 
     print(res)
-    return render(request, 'success.html',{'result': res})
+    return render(request, 'success.html',file_context)
 
 
 def uploadfile(request):
@@ -201,7 +192,5 @@ def delete_all(request):
         messages.success(request,'File deleted successfully.')  
         return redirect('home')   
 
-
-
-with open("static\JSON\data.json", "w") as f:
-    json.dump(data, f)
+# with open("static\JSON\data.json", "w") as f:
+#     json.dump(data, f)

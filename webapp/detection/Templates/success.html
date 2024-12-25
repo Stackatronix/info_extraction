@@ -9,7 +9,7 @@
                        text-align:center; 
                     }
                 </style> 
-                {% for entry in result %}
+                <!-- {% for entry in result %}
                     <h2>Summary</h2>
                     <p>{{ entry.summary }}</p>
             
@@ -37,9 +37,12 @@
                             </li>
                         {% endfor %}
                     </ul>
-                {% endfor %}
+                {% endfor %} -->
                 <!-- <p>{{result}}</p>         -->
                 
+                {% for i in pdf %}
+<p>{{i}}</p>
+                    {% endfor %}
             </div>  
         </div>
     </div>       
