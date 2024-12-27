@@ -8,6 +8,7 @@ from home import textfns, face_identify, detecting_images
 
 import json
 import spacy
+from home import face_identify
 
 from transformers import pipeline # type: ignore
 from spacy_entity_linker import EntityLinker #type: ignore
@@ -20,56 +21,46 @@ nlp = spacy.load("en_core_web_sm")
 # ner_model = pipeline("ner", model="dbmdz/bert-large-cased-finetuned-conll03-english")
 # nlpStanza = stanza.Pipeline('en', processors='tokenize,ner')
 # nlpStanza = stanza.Pipeline('en', processors='tokenize,mwt,pos,lemma,depparse,ner')
+imgs= {}
+excel = {}
 
-data= {}
-file_context= {}
-file_info={}
+entities = {}
+import spacy
+
+# Load the spaCy model (Make sure you have the model installed, e.g., `en_core_web_sm`)
+nlp = spacy.load('en_core_web_sm')
 
 def extract_named_entities(text):
-    # nlp = spacy.load("en_core_web_sm")
     doc = nlp(text)
-    entities = []
-    for ent in doc.ents:
-        
-        entities.append({"text": ent.text, "label": ent.label_})
+    current_person = None
+    
+    # Loop through the sentences (using 'sents' instead of 'sentences')
+    for sent in doc.sents:
+        for ent in sent.ents:
+            # If the entity is a person, set it as the current person
+            if ent.label_ == "PERSON":
+                current_person = ent.text
+                if current_person not in entities:
+                    entities[current_person] = {}
+            # Assign attributes like dates, locations, or any additional details
+            elif current_person:
+                if ent.label_ in ["DATE", "TIME", "GPE", "QUANTITY"]:
+                    entities[current_person][ent.label_] = entities[current_person].get(ent.label_, []) + [ent.text]
+
+        # Check sentences manually for explicit attributes like Height or Gender
+        if current_person:
+            sentence_text = sent.text.lower()
+            if "height" in sentence_text:
+                entities[current_person]["Height"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+            if "weight" in sentence_text:
+                entities[current_person]["Weight"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+            if "gender" in sentence_text:
+                entities[current_person]["Gender"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+            if "alias" in sentence_text:
+                entities[current_person]["Alias"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
+
     return entities
 
-
-
-
-
-
-    # doc = nlpStanza(text)
-    # print(doc)
-    # entities = {}
-    # current_person = None
-
-    # for sentence in doc.sentences:
-    #     for ent in sentence.ents:
-    #         # If the entity is a person, set it as the current person
-    #         if ent.type == "PERSON":
-    #             current_person = ent.text
-    #             if current_person not in entities:
-    #                 entities[current_person] = {}
-    #         # Assign attributes like dates, locations, or any additional details
-    #         elif current_person:
-    #             if ent.type in ["DATE", "TIME", "GPE", "QUANTITY"]:
-    #                 entities[current_person][ent.type] = entities[current_person].get(ent.type, []) + [ent.text]
-
-    #     # Check sentences manually for explicit attributes like Height or Gender
-    #     if current_person:
-    #         sentence_text = sentence.text.lower()
-    #         if "height" in sentence_text:
-    #             entities[current_person]["Height"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-    #         if "weight" in sentence_text:
-    #             entities[current_person]["Weight"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-    #         if "gender" in sentence_text:
-    #             entities[current_person]["Gender"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-    #         if "alias" in sentence_text:
-    #             entities[current_person]["Alias"] = sentence_text.split(":")[1].strip() if ":" in sentence_text else sentence_text
-
-    # print(entities)
-    # return entities
 
 
 # def summarize_text(text):
@@ -77,19 +68,6 @@ def extract_named_entities(text):
 #     summarizer = pipeline("summarization")
 #     summary = summarizer(text, max_length=100, min_length=25, do_sample=False)
 #     return summary[0]["summary_text"]
-
-def extract_and_summarize_pdf(pdf_path):
-    text = textfns.extract_text_from_pdf(pdf_path)
-    entities = extract_named_entities(text)
-    # summary = summarize_text(text)
-    if "pdf" in file_context:
-        file_context["pdf"].extend([entities])
-    else:
-        file_context["pdf"] = [entities]
-    # return {
-    #     "summary": summary,
-    #     "entities": entities
-    # }
 
 
 def home(request):
@@ -106,19 +84,44 @@ def home(request):
 
 # functions for each file type
 def process_text_file(file_path):
+    text  = textfns.extract_text_from_txt(file_path)
+    extract_named_entities(text)
     print(f"Processing text file: {file_path}")
 
 def process_pdf_file(file_path):
-    extract_and_summarize_pdf(file_path)
-    print("processed")
+    text = textfns.extract_text_from_pdf(file_path)
+    extract_named_entities(text)
+    print(f"Processing text file: {file_path}")
 
 def process_doc_file(file_path):
+    text  = textfns.extract_text_from_docx(file_path)
+    extract_named_entities(text)
     print(f"Processing doc file: {file_path}")
 
+
+
+
+
 def process_image_file(file_path):
-    x = detecting_images.detect_objects_and_plot(file_path)
-    # print(x)
+    x = detecting_images.detect_objects_in_photo(file_path)
+    print(x)
+    if x == file_path:
+        if 'img' in imgs:
+            imgs['img'].append(x)
+        else:
+            imgs['img'] = [x]
+    else:
+        print(face_identify.face_idf(file_path))
+    
     print(f"Processing image file: {file_path}")
+
+def process_excel_file(file_path):
+    text=textfns.extract_text_from_excel(file_path)
+    if 'excel info' in excel:
+        excel['excel info'].append(text)
+    else:
+        excel['excel info'] = [text]
+    print(f"Processing doc file: {file_path}")
 
 def process_unknown_file(file_path):
     print(f"Unknown file type: {file_path}")
@@ -131,6 +134,7 @@ file_handlers = {
     ".jpg": process_image_file,
     ".png": process_image_file,
     ".docx": process_doc_file,
+    ".xlsx":process_excel_file,
 }
 
 # Get file paths from the folder
@@ -151,11 +155,13 @@ def process_files_in_folder(folder_path):
         handler(file_path) 
 
 def success(request):
-    folder_path = "upload/"
-    res = process_files_in_folder(folder_path)
-
-    print(res)
-    return render(request, 'success.html',file_context)
+    folder_path = "media/"
+    process_files_in_folder(folder_path)
+    
+    response = render(request, 'success.html',{'imgs':imgs, 'entities':entities, 'excel':excel})
+    imgs.clear()
+    entities.clear()
+    return response
 
 
 def uploadfile(request):

@@ -13,3 +13,5 @@ spacy_entity_linker
 transformers
 ultralytics
 matplotlib
+docx
+openpyxl

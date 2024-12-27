@@ -1,6 +1,0 @@
-tf-keras
-tensorflow
-pandas
-scikit-learn
-deepface
-numpy

@@ -1,10 +1,12 @@
 import cv2
 from ultralytics import YOLO
 import matplotlib.pyplot as plt 
+
+
 def detect_objects_in_photo(image_path):
     image_orig = cv2.imread(image_path)
     
-    yolo_model = YOLO(r'\home\best.pt')
+    yolo_model = YOLO(r'.\home\best.pt')
     
     results = yolo_model(image_orig)
 
@@ -15,16 +17,19 @@ def detect_objects_in_photo(image_path):
         detections = result.boxes.xyxy
 
         for pos, detection in enumerate(detections):
-            if conf[pos] >= 0.5:
+            if conf[pos] >= 0.3:
                 xmin, ymin, xmax, ymax = detection
                 label = f"{classes[int(cls[pos])]} {conf[pos]:.2f}" 
+                
                 color = (0, int(cls[pos]), 255)
                 cv2.rectangle(image_orig, (int(xmin), int(ymin)), (int(xmax), int(ymax)), color, 2)
                 cv2.putText(image_orig, label, (int(xmin), int(ymin) - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
-
-    result_path = "./imgs/Test/teste.jpg"
-    cv2.imwrite(result_path, image_orig)
-    return result_path
+                cv2.imwrite(image_path, image_orig)            
+            else:
+                image_path = label
+    # result_path = "./imgs/Test/teste.jpg"
+    
+    return image_path
 
 def detect_objects_in_video(video_path):
     yolo_model = YOLO(r'\home\best.pt')
